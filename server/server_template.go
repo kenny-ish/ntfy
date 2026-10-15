@@ -56,7 +56,7 @@ func (s *Server) handleBodyAsTemplatedTextMessage(ctx context.Context, m *model.
 	}
 	peekedBody := strings.TrimSpace(string(body.PeekedBytes))
 	if template.FileMode() {
-		if err := s.renderTemplateFromFile(ctx, m, template.FileName(), peekedBody); err != nil {
+		if err := s.renderTemplateFromFile(ctx, m, template.FileName(), peekedBody, priorityStr); err != nil {
 			return err
 		}
 	} else {
@@ -72,7 +72,8 @@ func (s *Server) handleBodyAsTemplatedTextMessage(ctx context.Context, m *model.
 
 // renderTemplateFromFile transforms the JSON message body according to a template from the filesystem.
 // The template file must be in the templates directory, or in the configured template directory.
-func (s *Server) renderTemplateFromFile(ctx context.Context, m *model.Message, templateName, peekedBody string) error {
+// If the template file does not set a priority, the priority sent with the request is used.
+func (s *Server) renderTemplateFromFile(ctx context.Context, m *model.Message, templateName, peekedBody, priorityStr string) error {
 	if !templateNameRegex.MatchString(templateName) {
 		return errHTTPBadRequestTemplateFileNotFound
 	}
@@ -108,6 +109,8 @@ func (s *Server) renderTemplateFromFile(ctx context.Context, m *model.Message, t
 		if m.Priority, err = util.ParsePriority(renderedPriority); err != nil {
 			return errHTTPBadRequestPriorityInvalid
 		}
+	} else if m.Priority, err = util.ParsePriority(priorityStr); err != nil {
+		return errHTTPBadRequestPriorityInvalid
 	}
 	return nil
 }
